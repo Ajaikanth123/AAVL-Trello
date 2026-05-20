@@ -2,7 +2,7 @@ import { Draggable } from '@hello-pangea/dnd';
 import type { Card, Label, Activity, ChecklistItem } from '../../types/board';
 import { AlignLeft, Trash, User, Tag, History, Check, Calendar, ListChecks, Plus, X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 interface CardItemProps {
   card: Card;
@@ -70,7 +70,7 @@ function ChecklistBadge({ checklist }: { checklist?: ChecklistItem[] }) {
   );
 }
 
-export default function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLabels = [] }: CardItemProps) {
+function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLabels = [] }: CardItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState(card.description || '');
   const [newCheckItem, setNewCheckItem] = useState('');
@@ -539,3 +539,5 @@ export default function CardItem({ card, index, onUpdate, onDelete, searchQuery 
     </Dialog.Root>
   );
 }
+
+export default memo(CardItem);

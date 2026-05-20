@@ -7,11 +7,13 @@ import BackgroundSelector from '../features/boards/BackgroundSelector';
 import BoardFilters from '../features/boards/BoardFilters';
 import type { Label } from '../types/board';
 import { useState, useEffect } from 'react';
-import { Sparkles, X, Send, Bot, User, Share2, Archive, Shield, Trash2, RefreshCw } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User, Share2, Archive, Shield, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ref, onValue, off } from 'firebase/database';
 import { database } from '../api/firebase';
+import { useAuth } from '../context/AuthContext';
 
 interface Message {
   id: string;
@@ -22,11 +24,13 @@ interface Message {
 interface SharedMember {
   email: string;
   role: 'Admin' | 'Member' | 'Observer';
+  isOwner?: boolean;
 }
 
 export default function BoardViewPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', sender: 'ai', text: 'Hello! I am your AAVL AI Copilot. Try asking me: "Create 3 tasks for building a website landing page" or "Generate a quick launch checklist".' }
@@ -38,10 +42,25 @@ export default function BoardViewPage() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'Admin' | 'Member' | 'Observer'>('Member');
-  const [sharedMembers, setSharedMembers] = useState<SharedMember[]>([
-    { email: 'alex.mercer@aavl.com', role: 'Admin' },
-    { email: 'sarah.connor@aavl.com', role: 'Member' }
-  ]);
+  
+  // Initialize with current user as owner
+  const [sharedMembers, setSharedMembers] = useState<SharedMember[]>(() => {
+    const currentUserEmail = user?.email || 'you@example.com';
+    return [{ email: currentUserEmail, role: 'Admin', isOwner: true }];
+  });
+
+  // Update current user when auth changes
+  useEffect(() => {
+    if (user?.email) {
+      setSharedMembers(prev => {
+        const hasCurrentUser = prev.some(m => m.email === user.email);
+        if (!hasCurrentUser) {
+          return [{ email: user.email, role: 'Admin', isOwner: true }, ...prev.filter(m => !m.isOwner)];
+        }
+        return prev.map(m => m.isOwner ? { ...m, email: user.email } : m);
+      });
+    }
+  }, [user?.email]);
 
   // Archiving States
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
@@ -446,12 +465,57 @@ export default function BoardViewPage() {
                           <div className="w-6.5 h-6.5 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary text-[10px]">
                             {member.email.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-foreground font-semibold truncate max-w-[180px]">{member.email}</span>
+                          <div className="flex flex-col">
+                            <span className="text-foreground font-semibold truncate max-w-[180px]">{member.email}</span>
+                            {member.isOwner && <span className="text-[9px] text-muted-foreground">(You)</span>}
+                          </div>
                         </div>
-                        <span className="flex items-center gap-1 text-[10px] bg-black/5 dark:bg-white/5 text-muted-foreground font-bold px-2 py-0.5 rounded-full">
-                          <Shield className="w-3 h-3 text-primary" />
-                          {member.role}
-                        </span>
+                        
+                        {member.isOwner ? (
+                          <span className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
+                            <Shield className="w-3 h-3" />
+                            Owner
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <DropdownMenu.Root>
+                              <DropdownMenu.Trigger asChild>
+                                <button className="flex items-center gap-1 text-[10px] bg-black/5 dark:bg-white/5 text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10 font-bold px-2 py-0.5 rounded-full transition-all cursor-pointer">
+                                  <Shield className="w-3 h-3 text-primary" />
+                                  {member.role}
+                                  <ChevronDown className="w-3 h-3" />
+                                </button>
+                              </DropdownMenu.Trigger>
+                              <DropdownMenu.Portal>
+                                <DropdownMenu.Content className="min-w-[120px] bg-white dark:bg-zinc-800 border border-border rounded-lg shadow-lg p-1 z-50">
+                                  {(['Admin', 'Member', 'Observer'] as const).map(role => (
+                                    <DropdownMenu.Item
+                                      key={role}
+                                      onClick={() => {
+                                        setSharedMembers(prev => 
+                                          prev.map(m => m.email === member.email ? { ...m, role } : m)
+                                        );
+                                      }}
+                                      className="px-3 py-1.5 text-xs font-medium text-foreground hover:bg-primary/10 rounded cursor-pointer outline-none"
+                                    >
+                                      {role}
+                                    </DropdownMenu.Item>
+                                  ))}
+                                </DropdownMenu.Content>
+                              </DropdownMenu.Portal>
+                            </DropdownMenu.Root>
+                            
+                            <button
+                              onClick={() => {
+                                setSharedMembers(prev => prev.filter(m => m.email !== member.email));
+                              }}
+                              className="p-1 hover:bg-destructive/10 text-destructive rounded transition-all"
+                              title="Remove member"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -3,7 +3,7 @@ import type { DropResult } from '@hello-pangea/dnd';
 import type { BoardData } from '../../types/board';
 import BoardList from './BoardList';
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 
 interface KanbanBoardProps {
   boardData: BoardData;
@@ -12,10 +12,15 @@ interface KanbanBoardProps {
   activeLabels?: string[];
 }
 
-export default function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [] }: KanbanBoardProps) {
+function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [] }: KanbanBoardProps) {
   const [lists, setLists] = useState(boardData.lists || []);
 
-  const handleDragEnd = (result: DropResult) => {
+  // Sync with external boardData changes
+  useEffect(() => {
+    setLists(boardData.lists || []);
+  }, [boardData.lists]);
+
+  const handleDragEnd = useCallback((result: DropResult) => {
     const { destination, source, type } = result;
 
     if (!destination) return;
@@ -24,43 +29,46 @@ export default function KanbanBoard({ boardData, onUpdate, searchQuery = '', act
       return;
     }
 
-    const newLists = Array.from(lists);
+    setLists(currentLists => {
+      const newLists = Array.from(currentLists);
 
-    // Moving a list
-    if (type === 'list') {
-      const [removed] = newLists.splice(source.index, 1);
-      newLists.splice(destination.index, 0, removed);
-      
-      setLists(newLists);
+      // Moving a list
+      if (type === 'list') {
+        const [removed] = newLists.splice(source.index, 1);
+        newLists.splice(destination.index, 0, removed);
+        
+        // Update immediately for smooth UX
+        onUpdate({ ...boardData, lists: newLists });
+        return newLists;
+      }
+
+      // Moving a card
+      const sourceListIndex = newLists.findIndex(list => list.id === source.droppableId);
+      const destListIndex = newLists.findIndex(list => list.id === destination.droppableId);
+
+      const sourceList = newLists[sourceListIndex];
+      const destList = newLists[destListIndex];
+
+      const sourceCards = Array.from(sourceList.cards || []);
+      const destCards = source.droppableId === destination.droppableId 
+        ? sourceCards 
+        : Array.from(destList.cards || []);
+
+      const [removedCard] = sourceCards.splice(source.index, 1);
+      destCards.splice(destination.index, 0, removedCard);
+
+      newLists[sourceListIndex] = { ...sourceList, cards: sourceCards };
+      if (source.droppableId !== destination.droppableId) {
+        newLists[destListIndex] = { ...destList, cards: destCards };
+      }
+
+      // Update immediately for smooth UX
       onUpdate({ ...boardData, lists: newLists });
-      return;
-    }
+      return newLists;
+    });
+  }, [boardData, onUpdate]);
 
-    // Moving a card
-    const sourceListIndex = newLists.findIndex(list => list.id === source.droppableId);
-    const destListIndex = newLists.findIndex(list => list.id === destination.droppableId);
-
-    const sourceList = newLists[sourceListIndex];
-    const destList = newLists[destListIndex];
-
-    const sourceCards = Array.from(sourceList.cards || []);
-    const destCards = source.droppableId === destination.droppableId 
-      ? sourceCards 
-      : Array.from(destList.cards || []);
-
-    const [removedCard] = sourceCards.splice(source.index, 1);
-    destCards.splice(destination.index, 0, removedCard);
-
-    newLists[sourceListIndex] = { ...sourceList, cards: sourceCards };
-    if (source.droppableId !== destination.droppableId) {
-      newLists[destListIndex] = { ...destList, cards: destCards };
-    }
-
-    setLists(newLists);
-    onUpdate({ ...boardData, lists: newLists });
-  };
-
-  const addList = () => {
+  const addList = useCallback(() => {
     const newList = {
       id: `list-${Date.now()}`,
       title: 'New List',
@@ -69,7 +77,14 @@ export default function KanbanBoard({ boardData, onUpdate, searchQuery = '', act
     const newLists = [...lists, newList];
     setLists(newLists);
     onUpdate({ ...boardData, lists: newLists });
-  };
+  }, [lists, boardData, onUpdate]);
+
+  const handleListUpdate = useCallback((index: number, updatedList: any) => {
+    const newLists = [...lists];
+    newLists[index] = updatedList;
+    setLists(newLists);
+    onUpdate({ ...boardData, lists: newLists });
+  }, [lists, boardData, onUpdate]);
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
@@ -85,12 +100,7 @@ export default function KanbanBoard({ boardData, onUpdate, searchQuery = '', act
                 key={list.id} 
                 list={list} 
                 index={index} 
-                onUpdate={(updatedList) => {
-                  const newLists = [...lists];
-                  newLists[index] = updatedList;
-                  setLists(newLists);
-                  onUpdate({ ...boardData, lists: newLists });
-                }}
+                onUpdate={(updatedList) => handleListUpdate(index, updatedList)}
                 searchQuery={searchQuery}
                 activeLabels={activeLabels}
               />
@@ -113,3 +123,5 @@ export default function KanbanBoard({ boardData, onUpdate, searchQuery = '', act
     </DragDropContext>
   );
 }
+
+export default memo(KanbanBoard);

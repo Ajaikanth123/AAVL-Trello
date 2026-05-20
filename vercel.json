@@ -1,0 +1,10 @@
+{
+  "builds": [
+    { "src": "server.mjs", "use": "@vercel/node" },
+    { "src": "vite.config.ts", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/server.mjs" },
+    { "src": "/(.*)", "dest": "/dist/$1" }
+  ]
+}

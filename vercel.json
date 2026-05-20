@@ -1,10 +1,11 @@
 {
-  "builds": [
-    { "src": "server.mjs", "use": "@vercel/node" },
-    { "src": "vite.config.ts", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/server.mjs" },
-    { "src": "/(.*)", "dest": "/dist/$1" }
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/api/health", "destination": "/api/health" },
+    { "source": "/api/boards/invite", "destination": "/api/invite" },
+    { "source": "/api/ai/copilot", "destination": "/api/copilot" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

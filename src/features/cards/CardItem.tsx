@@ -12,7 +12,8 @@ interface CardItemProps {
   onDelete: () => void;
   searchQuery?: string;
   activeLabels?: string[];
-  boardMembers?: BoardMember[]; // Add board members prop
+  boardMembers?: BoardMember[];
+  canEdit?: boolean; // Members can only complete tasks, not edit
 }
 
 const PRESET_LABELS: Label[] = [
@@ -78,7 +79,7 @@ function ChecklistBadge({ checklist }: { checklist?: ChecklistItem[] }) {
   );
 }
 
-function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLabels = [], boardMembers = [] }: CardItemProps) {
+function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLabels = [], boardMembers = [], canEdit = true }: CardItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState(card.description || '');
   const [newCheckItem, setNewCheckItem] = useState('');

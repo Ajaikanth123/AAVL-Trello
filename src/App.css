@@ -182,3 +182,26 @@
     border-right-color: var(--border);
   }
 }
+
+
+/* Smooth Drag and Drop Performance */
+[data-rbd-draggable-context-id] {
+  will-change: transform;
+}
+
+[data-rbd-draggable-id] {
+  transition: none !important;
+}
+
+[data-rbd-drag-handle-context-id] {
+  cursor: grab !important;
+}
+
+[data-rbd-drag-handle-context-id]:active {
+  cursor: grabbing !important;
+}
+
+/* Smooth scrolling for lists */
+[data-rbd-droppable-id] {
+  scroll-behavior: smooth;
+}

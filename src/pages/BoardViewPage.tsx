@@ -69,18 +69,31 @@ export default function BoardViewPage() {
     enabled: !!boardId,
   });
 
-  // Get board members from board data, or initialize with current user
-  const boardMembers = board?.data.members || [];
-  const sharedMembers = boardMembers.length > 0 
-    ? boardMembers 
-    : user?.email 
-      ? [{ email: user.email, role: 'Admin' as const, isOwner: true }]
-      : [];
+  // Initialize members if not present - only board creator is owner
+  useEffect(() => {
+    if (board && user?.email && (!board.data.members || board.data.members.length === 0)) {
+      // First time - set current user as owner
+      const initialMembers = [{ email: user.email, role: 'Admin' as const, isOwner: true }];
+      const newBoardData = { ...board.data, members: initialMembers };
+      updateBoardMutation.mutate(newBoardData);
+    }
+  }, [board?.id, user?.email]);
 
-  // Get current user's role
-  const currentUserRole = sharedMembers.find(m => m.email === user?.email)?.role || 'Observer';
-  const canManageMembers = currentUserRole === 'Admin';
-  const canEditBoard = currentUserRole === 'Admin' || currentUserRole === 'Member';
+  // Get board members from board data
+  const boardMembers = board?.data.members || [];
+  const sharedMembers = boardMembers;
+
+  // Get current user's role and permissions
+  const currentUserMember = sharedMembers.find(m => m.email === user?.email);
+  const currentUserRole = currentUserMember?.role || 'Observer';
+  const isOwner = currentUserMember?.isOwner || false;
+  
+  // Permission flags
+  const canManageMembers = isOwner; // Only owner can manage members
+  const canCreateCards = isOwner; // Only owner can create cards
+  const canEditCards = isOwner || currentUserRole === 'Member'; // Owner and Members can edit
+  const canDragCards = isOwner || currentUserRole === 'Member'; // Owner and Members can drag
+  const canViewOnly = currentUserRole === 'Observer'; // Observers can only view
 
   // Sync members to board data
   const syncMembersToBoard = (members: SharedMember[]) => {
@@ -325,8 +338,12 @@ export default function BoardViewPage() {
       if (response.ok) {
         alert(`Success: ${data?.message || 'Invitation sent.'}`);
         
-        // Add member to board data
-        const newMember = { email: inviteEmail.trim(), role: inviteRole };
+        // Add member to board data - NEVER as owner
+        const newMember = { 
+          email: inviteEmail.trim(), 
+          role: inviteRole,
+          isOwner: false // Invited members are NEVER owners
+        };
         const updatedMembers = [...sharedMembers, newMember];
         syncMembersToBoard(updatedMembers);
         
@@ -627,6 +644,9 @@ export default function BoardViewPage() {
             searchQuery={searchQuery}
             activeLabels={activeLabels}
             boardMembers={sharedMembers}
+            canCreateCards={canCreateCards}
+            canEditCards={canEditCards}
+            canDragCards={canDragCards}
           />
         </div>
 

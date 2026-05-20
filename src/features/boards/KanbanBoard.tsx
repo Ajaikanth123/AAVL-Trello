@@ -11,9 +11,21 @@ interface KanbanBoardProps {
   searchQuery?: string;
   activeLabels?: string[];
   boardMembers?: BoardMember[];
+  canCreateCards?: boolean;
+  canEditCards?: boolean;
+  canDragCards?: boolean;
 }
 
-function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [], boardMembers = [] }: KanbanBoardProps) {
+function KanbanBoard({ 
+  boardData, 
+  onUpdate, 
+  searchQuery = '', 
+  activeLabels = [], 
+  boardMembers = [],
+  canCreateCards = true,
+  canEditCards = true,
+  canDragCards = true
+}: KanbanBoardProps) {
   const [lists, setLists] = useState(boardData.lists || []);
 
   // Sync with external boardData changes
@@ -22,6 +34,11 @@ function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [],
   }, [boardData.lists]);
 
   const handleDragEnd = useCallback((result: DropResult) => {
+    // Check if user can drag cards
+    if (!canDragCards) {
+      return; // Prevent drag if no permission
+    }
+
     const { destination, source, type } = result;
 
     if (!destination) return;
@@ -70,6 +87,8 @@ function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [],
   }, [boardData, onUpdate]);
 
   const addList = useCallback(() => {
+    if (!canCreateCards) return; // Only admins can add lists
+    
     const newList = {
       id: `list-${Date.now()}`,
       title: 'New List',
@@ -78,7 +97,7 @@ function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [],
     const newLists = [...lists, newList];
     setLists(newLists);
     onUpdate({ ...boardData, lists: newLists });
-  }, [lists, boardData, onUpdate]);
+  }, [lists, boardData, onUpdate, canCreateCards]);
 
   const handleListUpdate = useCallback((index: number, updatedList: any) => {
     const newLists = [...lists];
@@ -105,20 +124,24 @@ function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [],
                 searchQuery={searchQuery}
                 activeLabels={activeLabels}
                 boardMembers={boardMembers}
+                canCreateCards={canCreateCards}
+                canEditCards={canEditCards}
               />
             ))}
             {provided.placeholder}
             
-            {/* Add List Button */}
-            <div className="shrink-0 w-72">
-              <button 
-                onClick={addList}
-                className="w-full flex items-center gap-2 bg-white/35 dark:bg-black/15 hover:bg-white/50 dark:hover:bg-black/25 backdrop-blur-md text-foreground py-3 px-4 rounded-xl transition-all duration-200 font-bold border border-white/10 shadow-xs cursor-pointer"
-              >
-                <Plus className="w-5 h-5" />
-                Add another list
-              </button>
-            </div>
+            {/* Add List Button - Only for Admins */}
+            {canCreateCards && (
+              <div className="shrink-0 w-72">
+                <button 
+                  onClick={addList}
+                  className="w-full flex items-center gap-2 bg-white/35 dark:bg-black/15 hover:bg-white/50 dark:hover:bg-black/25 backdrop-blur-md text-foreground py-3 px-4 rounded-xl transition-all duration-200 font-bold border border-white/10 shadow-xs cursor-pointer"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add another list
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Droppable>

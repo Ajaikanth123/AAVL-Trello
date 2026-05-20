@@ -12,9 +12,20 @@ interface BoardListProps {
   searchQuery?: string;
   activeLabels?: string[];
   boardMembers?: BoardMember[];
+  canCreateCards?: boolean;
+  canEditCards?: boolean;
 }
 
-export default function BoardList({ list, index, onUpdate, searchQuery = '', activeLabels = [], boardMembers = [] }: BoardListProps) {
+export default function BoardList({ 
+  list, 
+  index, 
+  onUpdate, 
+  searchQuery = '', 
+  activeLabels = [], 
+  boardMembers = [],
+  canCreateCards = true,
+  canEditCards = true
+}: BoardListProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(list.title);
   const [newCardTitle, setNewCardTitle] = useState('');
@@ -144,6 +155,7 @@ export default function BoardList({ list, index, onUpdate, searchQuery = '', act
                     searchQuery={searchQuery}
                     activeLabels={activeLabels}
                     boardMembers={boardMembers}
+                    canEdit={canEditCards}
                   />
                 ))}
                 {provided.placeholder}
@@ -151,50 +163,52 @@ export default function BoardList({ list, index, onUpdate, searchQuery = '', act
             )}
           </Droppable>
 
-          {/* Footer (Add Card) */}
-          <div className="p-3 border-t border-border/50">
-            {isAddingCard ? (
-              <form onSubmit={handleAddCard} className="space-y-2.5">
-                <textarea
-                  placeholder="Enter card title..."
-                  value={newCardTitle}
-                  onChange={(e) => setNewCardTitle(e.target.value)}
-                  className="w-full p-3 text-xs bg-white dark:bg-zinc-950 border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary resize-none transition-all duration-200 text-foreground"
-                  rows={2}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleAddCard(e);
-                    }
-                  }}
-                />
-                <div className="flex gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingCard(false)}
-                    className="px-3.5 py-2 text-xs font-bold hover:bg-secondary rounded-xl transition-all cursor-pointer text-foreground"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-3.5 py-2 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-101 active:scale-99 rounded-xl transition-all cursor-pointer shadow-xs"
-                  >
-                    Add Card
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <button
-                onClick={() => setIsAddingCard(true)}
-                className="w-full flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 py-2.5 px-3 rounded-xl transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                Add a card
-              </button>
-            )}
-          </div>
+          {/* Footer (Add Card) - Only for Admins */}
+          {canCreateCards && (
+            <div className="p-3 border-t border-border/50">
+              {isAddingCard ? (
+                <form onSubmit={handleAddCard} className="space-y-2.5">
+                  <textarea
+                    placeholder="Enter card title..."
+                    value={newCardTitle}
+                    onChange={(e) => setNewCardTitle(e.target.value)}
+                    className="w-full p-3 text-xs bg-white dark:bg-zinc-950 border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary resize-none transition-all duration-200 text-foreground"
+                    rows={2}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAddCard(e);
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCard(false)}
+                      className="px-3.5 py-2 text-xs font-bold hover:bg-secondary rounded-xl transition-all cursor-pointer text-foreground"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-3.5 py-2 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-101 active:scale-99 rounded-xl transition-all cursor-pointer shadow-xs"
+                    >
+                      Add Card
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setIsAddingCard(true)}
+                  className="w-full flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 py-2.5 px-3 rounded-xl transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add a card
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Draggable>

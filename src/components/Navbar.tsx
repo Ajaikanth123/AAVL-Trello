@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, LogOut, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, LogOut } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../api/firebase';
 
 export default function Navbar() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   const handleLogout = async () => {
     await signOut(auth);

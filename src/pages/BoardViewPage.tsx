@@ -1,13 +1,13 @@
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { boardsApi } from '../api/boards';
-import type { Board, BoardData, Card } from '../types/board';
+import type { Card } from '../types/board';
 import KanbanBoard from '../features/boards/KanbanBoard';
 import BackgroundSelector from '../features/boards/BackgroundSelector';
 import BoardFilters from '../features/boards/BoardFilters';
 import type { Label } from '../types/board';
 import { useState, useEffect } from 'react';
-import { Sparkles, X, Send, Bot, User, Share2, Archive, Shield, Trash2, RefreshCw, Plus, Check } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User, Share2, Archive, Shield, Trash2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ref, onValue, off } from 'firebase/database';
@@ -80,7 +80,7 @@ export default function BoardViewPage() {
 
     const boardRef = ref(database, `boards/${boardId}`);
     
-    const unsubscribe = onValue(boardRef, (snapshot) => {
+    const unsubscribe = onValue(boardRef, (_snapshot) => {
       console.log('Realtime database update received from Firebase');
       queryClient.invalidateQueries({ queryKey: ['boards', boardId] });
     });
@@ -105,7 +105,7 @@ export default function BoardViewPage() {
 
       return { previousBoard };
     },
-    onError: (err, newBoardData, context) => {
+    onError: (_err, _newBoardData, context) => {
       if (context?.previousBoard) {
         queryClient.setQueryData(['boards', boardId], context.previousBoard);
       }

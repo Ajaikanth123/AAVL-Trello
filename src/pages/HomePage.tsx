@@ -1,8 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { boardsApi } from '../api/boards';
-import { Plus, X, Palette, Image as ImageIcon } from 'lucide-react';
-import type { Board } from '../types/board';
+import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../context/AuthContext';

@@ -18,12 +18,6 @@ export default function BoardFilters({
 }: BoardFiltersProps) {
   const hasActiveFilters = searchQuery.length > 0 || activeLabels.length > 0;
 
-  const clearFilters = () => {
-    onSearchChange('');
-    // clear all active labels
-    activeLabels.forEach(id => onToggleLabel(id)); // This toggles them off one by one, wait no, better to pass an onClear callback.
-  };
-
   return (
     <div className="px-6 py-3 bg-black/10 dark:bg-black/30 backdrop-blur-sm border-b border-border/20 flex flex-wrap items-center gap-4 z-10 transition-all">
       

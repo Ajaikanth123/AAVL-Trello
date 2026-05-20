@@ -16,12 +16,20 @@ export interface ChecklistItem {
   completed: boolean;
 }
 
+export interface BoardMember {
+  email: string;
+  name?: string;
+  avatar?: string;
+  role: 'Admin' | 'Member' | 'Observer';
+  isOwner?: boolean;
+}
+
 export interface Card {
   id: string;
   title: string;
   description?: string;
   labels: Label[];
-  assignees: string[]; // UUIDs or names of members
+  assignees: string[]; // Email addresses of assigned members
   createdAt: string;
   activities?: Activity[];
   archived?: boolean;
@@ -39,6 +47,7 @@ export interface List {
 export interface BoardData {
   lists: List[];
   background?: string;
+  members?: BoardMember[]; // Shared members with roles
 }
 
 export interface Board {
@@ -46,12 +55,6 @@ export interface Board {
   owner_id: string;
   data: BoardData;
   created_at: string;
-}
-
-export interface BoardMember {
-  board_id: string;
-  user_id: string;
-  role: 'admin' | 'member' | 'observer';
 }
 
 export interface Profile {

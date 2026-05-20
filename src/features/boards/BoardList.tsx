@@ -1,5 +1,5 @@
 import { Draggable, Droppable } from '@hello-pangea/dnd';
-import type { List, Card } from '../../types/board';
+import type { List, Card, BoardMember } from '../../types/board';
 import CardItem from '../cards/CardItem';
 import { MoreHorizontal, Plus, Trash } from 'lucide-react';
 import { useState } from 'react';
@@ -11,9 +11,10 @@ interface BoardListProps {
   onUpdate: (updatedList: List) => void;
   searchQuery?: string;
   activeLabels?: string[];
+  boardMembers?: BoardMember[];
 }
 
-export default function BoardList({ list, index, onUpdate, searchQuery = '', activeLabels = [] }: BoardListProps) {
+export default function BoardList({ list, index, onUpdate, searchQuery = '', activeLabels = [], boardMembers = [] }: BoardListProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(list.title);
   const [newCardTitle, setNewCardTitle] = useState('');
@@ -142,6 +143,7 @@ export default function BoardList({ list, index, onUpdate, searchQuery = '', act
                     }}
                     searchQuery={searchQuery}
                     activeLabels={activeLabels}
+                    boardMembers={boardMembers}
                   />
                 ))}
                 {provided.placeholder}

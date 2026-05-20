@@ -1,6 +1,6 @@
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
-import type { BoardData } from '../../types/board';
+import type { BoardData, BoardMember } from '../../types/board';
 import BoardList from './BoardList';
 import { Plus } from 'lucide-react';
 import { useState, useEffect, useCallback, memo } from 'react';
@@ -10,9 +10,10 @@ interface KanbanBoardProps {
   onUpdate: (newData: BoardData) => void;
   searchQuery?: string;
   activeLabels?: string[];
+  boardMembers?: BoardMember[];
 }
 
-function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [] }: KanbanBoardProps) {
+function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [], boardMembers = [] }: KanbanBoardProps) {
   const [lists, setLists] = useState(boardData.lists || []);
 
   // Sync with external boardData changes
@@ -103,6 +104,7 @@ function KanbanBoard({ boardData, onUpdate, searchQuery = '', activeLabels = [] 
                 onUpdate={(updatedList) => handleListUpdate(index, updatedList)}
                 searchQuery={searchQuery}
                 activeLabels={activeLabels}
+                boardMembers={boardMembers}
               />
             ))}
             {provided.placeholder}

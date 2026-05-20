@@ -42,25 +42,6 @@ export default function BoardViewPage() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'Admin' | 'Member' | 'Observer'>('Member');
-  
-  // Initialize with current user as owner
-  const [sharedMembers, setSharedMembers] = useState<SharedMember[]>(() => {
-    const currentUserEmail = user?.email || 'you@example.com';
-    return [{ email: currentUserEmail, role: 'Admin', isOwner: true }];
-  });
-
-  // Update current user when auth changes
-  useEffect(() => {
-    if (user?.email) {
-      setSharedMembers(prev => {
-        const hasCurrentUser = prev.some(m => m.email === user.email);
-        if (!hasCurrentUser) {
-          return [{ email: user.email, role: 'Admin', isOwner: true }, ...prev.filter(m => !m.isOwner)];
-        }
-        return prev.map(m => m.isOwner ? { ...m, email: user.email } : m);
-      });
-    }
-  }, [user?.email]);
 
   // Archiving States
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
@@ -87,6 +68,26 @@ export default function BoardViewPage() {
     queryFn: () => boardsApi.fetchBoardById(boardId!),
     enabled: !!boardId,
   });
+
+  // Get board members from board data, or initialize with current user
+  const boardMembers = board?.data.members || [];
+  const sharedMembers = boardMembers.length > 0 
+    ? boardMembers 
+    : user?.email 
+      ? [{ email: user.email, role: 'Admin' as const, isOwner: true }]
+      : [];
+
+  // Get current user's role
+  const currentUserRole = sharedMembers.find(m => m.email === user?.email)?.role || 'Observer';
+  const canManageMembers = currentUserRole === 'Admin';
+  const canEditBoard = currentUserRole === 'Admin' || currentUserRole === 'Member';
+
+  // Sync members to board data
+  const syncMembersToBoard = (members: SharedMember[]) => {
+    if (!board) return;
+    const newBoardData = { ...board.data, members };
+    updateBoardMutation.mutate(newBoardData);
+  };
 
   useEffect(() => {
     if (!boardId) return;
@@ -290,7 +291,13 @@ export default function BoardViewPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim() || !boardId) return;
+    if (!inviteEmail.trim() || !boardId || !board) return;
+
+    // Check if already invited
+    if (sharedMembers.some(m => m.email === inviteEmail.trim())) {
+      alert('This user is already a member of this board.');
+      return;
+    }
 
     try {
       const response = await fetch('/api/boards/invite', {
@@ -317,7 +324,12 @@ export default function BoardViewPage() {
 
       if (response.ok) {
         alert(`Success: ${data?.message || 'Invitation sent.'}`);
-        setSharedMembers(prev => [...prev, { email: inviteEmail.trim(), role: inviteRole }]);
+        
+        // Add member to board data
+        const newMember = { email: inviteEmail.trim(), role: inviteRole };
+        const updatedMembers = [...sharedMembers, newMember];
+        syncMembersToBoard(updatedMembers);
+        
         setInviteEmail('');
       } else {
         const errMsg = data?.error || data?.message || response.statusText || 'Unknown error';
@@ -467,16 +479,16 @@ export default function BoardViewPage() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-foreground font-semibold truncate max-w-[180px]">{member.email}</span>
-                            {member.isOwner && <span className="text-[9px] text-muted-foreground">(You)</span>}
+                            {member.email === user?.email && <span className="text-[9px] text-muted-foreground">(You)</span>}
                           </div>
                         </div>
                         
-                        {member.isOwner ? (
+                        {member.isOwner || member.email === user?.email ? (
                           <span className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
                             <Shield className="w-3 h-3" />
-                            Owner
+                            {member.isOwner ? 'Owner' : member.role}
                           </span>
-                        ) : (
+                        ) : canManageMembers ? (
                           <div className="flex items-center gap-2">
                             <DropdownMenu.Root>
                               <DropdownMenu.Trigger asChild>
@@ -492,9 +504,10 @@ export default function BoardViewPage() {
                                     <DropdownMenu.Item
                                       key={role}
                                       onClick={() => {
-                                        setSharedMembers(prev => 
-                                          prev.map(m => m.email === member.email ? { ...m, role } : m)
+                                        const updatedMembers = sharedMembers.map(m => 
+                                          m.email === member.email ? { ...m, role } : m
                                         );
+                                        syncMembersToBoard(updatedMembers);
                                       }}
                                       className="px-3 py-1.5 text-xs font-medium text-foreground hover:bg-primary/10 rounded cursor-pointer outline-none"
                                     >
@@ -507,7 +520,8 @@ export default function BoardViewPage() {
                             
                             <button
                               onClick={() => {
-                                setSharedMembers(prev => prev.filter(m => m.email !== member.email));
+                                const updatedMembers = sharedMembers.filter(m => m.email !== member.email);
+                                syncMembersToBoard(updatedMembers);
                               }}
                               className="p-1 hover:bg-destructive/10 text-destructive rounded transition-all"
                               title="Remove member"
@@ -515,6 +529,11 @@ export default function BoardViewPage() {
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[10px] bg-black/5 dark:bg-white/5 text-muted-foreground font-bold px-2 py-0.5 rounded-full">
+                            <Shield className="w-3 h-3 text-primary" />
+                            {member.role}
+                          </span>
                         )}
                       </div>
                     ))}
@@ -607,6 +626,7 @@ export default function BoardViewPage() {
             onUpdate={(newData) => updateBoardMutation.mutate(newData)} 
             searchQuery={searchQuery}
             activeLabels={activeLabels}
+            boardMembers={sharedMembers}
           />
         </div>
 

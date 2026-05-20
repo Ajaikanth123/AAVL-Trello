@@ -1,5 +1,5 @@
 import { Draggable } from '@hello-pangea/dnd';
-import type { Card, Label, Activity, ChecklistItem } from '../../types/board';
+import type { Card, Label, Activity, ChecklistItem, BoardMember } from '../../types/board';
 import { AlignLeft, Trash, User, Tag, History, Check, Calendar, ListChecks, Plus, X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useState, memo } from 'react';
@@ -12,13 +12,8 @@ interface CardItemProps {
   onDelete: () => void;
   searchQuery?: string;
   activeLabels?: string[];
+  boardMembers?: BoardMember[]; // Add board members prop
 }
-
-const PRESET_MESSBERS = [
-  { name: 'Alex Mercer', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces' },
-  { name: 'Sarah Connor', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=faces' },
-  { name: 'John Doe', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces' }
-];
 
 const PRESET_LABELS: Label[] = [
   { id: '1', name: 'Urgent', color: 'bg-red-500 text-white' },
@@ -26,6 +21,19 @@ const PRESET_LABELS: Label[] = [
   { id: '3', name: 'Development', color: 'bg-emerald-500 text-white' },
   { id: '4', name: 'Planning', color: 'bg-amber-500 text-white' }
 ];
+
+// Generate avatar from email
+function getAvatarUrl(email: string) {
+  const hash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const avatars = [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=faces'
+  ];
+  return avatars[hash % avatars.length];
+}
 
 function getDueDateStatus(dueDate: string | undefined, dueCompleted: boolean | undefined) {
   if (!dueDate) return null;
@@ -70,7 +78,7 @@ function ChecklistBadge({ checklist }: { checklist?: ChecklistItem[] }) {
   );
 }
 
-function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLabels = [] }: CardItemProps) {
+function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLabels = [], boardMembers = [] }: CardItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState(card.description || '');
   const [newCheckItem, setNewCheckItem] = useState('');
@@ -107,16 +115,16 @@ function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLab
     onUpdate(withActivity);
   };
 
-  const toggleAssignee = (name: string) => {
-    const exists = (card.assignees || []).includes(name);
+  const toggleAssignee = (email: string) => {
+    const exists = (card.assignees || []).includes(email);
     let updatedAssignees: string[];
     if (exists) {
-      updatedAssignees = (card.assignees || []).filter(a => a !== name);
+      updatedAssignees = (card.assignees || []).filter(a => a !== email);
     } else {
-      updatedAssignees = [...(card.assignees || []), name];
+      updatedAssignees = [...(card.assignees || []), email];
     }
     const updated = { ...card, assignees: updatedAssignees };
-    const withActivity = logActivity(`${exists ? 'Unassigned' : 'Assigned'} ${name}`, updated);
+    const withActivity = logActivity(`${exists ? 'Unassigned' : 'Assigned'} ${email}`, updated);
     onUpdate(withActivity);
   };
 
@@ -197,8 +205,14 @@ function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLab
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             onClick={() => setIsOpen(true)}
-            className={`group p-4 bg-white dark:bg-zinc-800 border border-border/70 rounded-2xl shadow-xs hover:shadow-md hover:border-primary/30 transition-colors transition-shadow duration-300 ease-out cursor-pointer select-none relative flex flex-col gap-3 ${
-              snapshot.isDragging ? 'shadow-lg border-primary/50 scale-[1.02] rotate-1 bg-white/95 dark:bg-zinc-800/95' : ''
+            style={{
+              ...provided.draggableProps.style,
+              transform: snapshot.isDragging 
+                ? `${provided.draggableProps.style?.transform} rotate(2deg)` 
+                : provided.draggableProps.style?.transform,
+            }}
+            className={`group p-4 bg-white dark:bg-zinc-800 border border-border/70 rounded-2xl hover:shadow-md hover:border-primary/30 transition-shadow duration-200 cursor-pointer select-none relative flex flex-col gap-3 ${
+              snapshot.isDragging ? 'shadow-2xl border-primary/60 opacity-90' : 'shadow-xs'
             } ${!isMatch && !snapshot.isDragging ? 'opacity-35 grayscale pointer-events-none' : ''}`}
           >
             {/* Active Label Pills */}
@@ -259,15 +273,14 @@ function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLab
               {/* Assignee Avatar Bubbles */}
               {card.assignees && card.assignees.length > 0 && (
                 <div className="flex -space-x-1.5 overflow-hidden">
-                  {card.assignees.map(name => {
-                    const member = PRESET_MESSBERS.find(m => m.name === name);
+                  {card.assignees.map(email => {
                     return (
                       <div
-                        key={name}
+                        key={email}
                         className="w-6 h-6 rounded-full border-2 border-white dark:border-zinc-800 overflow-hidden shrink-0 shadow-xs"
-                        title={name}
+                        title={email}
                       >
-                        <img src={member?.avatar} alt={name} className="w-full h-full object-cover" />
+                        <img src={getAvatarUrl(email)} alt={email} className="w-full h-full object-cover" />
                       </div>
                     );
                   })}
@@ -484,26 +497,35 @@ function CardItem({ card, index, onUpdate, onDelete, searchQuery = '', activeLab
                   Assign Team
                 </h5>
                 <div className="space-y-1.5">
-                  {PRESET_MESSBERS.map(member => {
-                    const isAssigned = (card.assignees || []).includes(member.name);
-                    return (
-                      <button
-                        key={member.name}
-                        onClick={() => toggleAssignee(member.name)}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all hover:scale-101 cursor-pointer ${
-                          isAssigned
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-border/60 hover:bg-black/5 dark:hover:bg-white/5'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <img src={member.avatar} alt={member.name} className="w-5.5 h-5.5 rounded-full object-cover shadow-xs border border-white/20" />
-                          <span>{member.name}</span>
-                        </div>
-                        {isAssigned && <Check className="w-3.5 h-3.5" />}
-                      </button>
-                    );
-                  })}
+                  {boardMembers.length > 0 ? (
+                    boardMembers.map(member => {
+                      const isAssigned = (card.assignees || []).includes(member.email);
+                      return (
+                        <button
+                          key={member.email}
+                          onClick={() => toggleAssignee(member.email)}
+                          className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all hover:scale-101 cursor-pointer ${
+                            isAssigned
+                              ? 'border-primary bg-primary/5 text-primary'
+                              : 'border-border/60 hover:bg-black/5 dark:hover:bg-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src={getAvatarUrl(member.email)} alt={member.email} className="w-5.5 h-5.5 rounded-full object-cover shadow-xs border border-white/20" />
+                            <div className="flex flex-col items-start">
+                              <span className="truncate max-w-[140px]">{member.email}</span>
+                              <span className="text-[9px] text-muted-foreground">{member.role}</span>
+                            </div>
+                          </div>
+                          {isAssigned && <Check className="w-3.5 h-3.5" />}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic text-center py-4">
+                      No team members yet. Share the board to add members.
+                    </p>
+                  )}
                 </div>
               </div>
 
